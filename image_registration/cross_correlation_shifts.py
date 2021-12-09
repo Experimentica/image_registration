@@ -25,8 +25,8 @@ def cross_correlation_shifts(image1, image2, errim1=None, errim2=None,
         The pixel-by-pixel error on the reference image
     errim2: np.ndarray [optional]
         The pixel-by-pixel error on the offset image.
-    maxoff: int
-        Maximum allowed offset (in pixels).  Useful for low s/n images that you
+    maxoff: (int, int)
+        Maximum allowed offset (x, y) (in pixels).  Useful for low s/n images that you
         know are reasonably well-aligned, but might find incorrect offsets due to
         edge noise
     zeromean : bool
@@ -86,19 +86,19 @@ def cross_correlation_shifts(image1, image2, errim1=None, errim2=None,
         raise ValueError("Cross-correlation image must have same shape as input images.  This can only be violated if you pass a strange kwarg to correlate2d.")
 
     ylen,xlen = image1.shape
-    xcen = xlen/2-(1-xlen%2)
-    ycen = ylen/2-(1-ylen%2)
+    xcen = xlen//2-(1-xlen%2)
+    ycen = ylen//2-(1-ylen%2)
 
     if ccorr.max() == 0:
         warnings.warn("WARNING: No signal found!  Offset is defaulting to 0,0")
         return 0,0
 
     if maxoff is not None:
-        if verbose: print("Limiting maximum offset to %i" % maxoff)
-        subccorr = ccorr[ycen-maxoff:ycen+maxoff+1,xcen-maxoff:xcen+maxoff+1]
+        if verbose: print("Limiting maximum offset to x=%i, y=%i" % maxoff)
+        subccorr = ccorr[ycen-maxoff[1]:ycen+maxoff[1]+1,xcen-maxoff[0]:xcen+maxoff[0]+1]
         ymax,xmax = np.unravel_index(subccorr.argmax(), subccorr.shape)
-        xmax = xmax+xcen-maxoff
-        ymax = ymax+ycen-maxoff
+        xmax = xmax+xcen-maxoff[0]
+        ymax = ymax+ycen-maxoff[1]
     else:
         ymax,xmax = np.unravel_index(ccorr.argmax(), ccorr.shape)
         subccorr = ccorr
@@ -112,7 +112,7 @@ def cross_correlation_shifts(image1, image2, errim1=None, errim2=None,
                    correlate2d(errim2**2, image1**2,**kwargs))**0.5
                    / image1.size)
         if maxoff is not None:
-            subeccorr = eccorr[ycen-maxoff:ycen+maxoff+1,xcen-maxoff:xcen+maxoff+1]
+            subeccorr = eccorr[ycen-maxoff[1]:ycen+maxoff[1]+1,xcen-maxoff[0]:xcen+maxoff[0]+1]
         else:
             subeccorr = eccorr
 
@@ -127,8 +127,8 @@ def cross_correlation_shifts(image1, image2, errim1=None, errim2=None,
             eyshift = epars[3]
         else:
             pars,epars = gaussfitter.gaussfit(subccorr,return_all=True)
-        xshift = maxoff - pars[2] if maxoff is not None else xcen - pars[2]
-        yshift = maxoff - pars[3] if maxoff is not None else ycen - pars[3]
+        xshift = maxoff[0] - pars[2] if maxoff[0] is not None else xcen - pars[2]
+        yshift = maxoff[1] - pars[3] if maxoff[1] is not None else ycen - pars[3]
         if verbose:
             print("Gaussian fit pars: ",xshift,yshift,epars[2],epars[3],pars[4],pars[5],epars[4],epars[5])
 
